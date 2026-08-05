@@ -1,0 +1,24 @@
+name: DNS probe (diagnostic)
+
+# Temporary. Determines which GoDaddy API surface this account has, so
+# dns_sync.py targets the right one. Read-only: every request is a GET.
+# Delete this workflow and scripts/dns_probe.py once dns_sync.py works.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet requests
+      - run: python scripts/dns_probe.py
+        env:
+          GODADDY_PAT: ${{ secrets.GODADDY_PAT }}
