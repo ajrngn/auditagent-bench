@@ -37,7 +37,7 @@ The `CNAME` file must contain the bare domain, one line, no protocol, no trailin
 
 Preferred path is the **DNS sync workflow**: Actions tab → "DNS sync" → Run workflow, leaving *Apply* unchecked to read the plan, then again with it checked. The token lives in Actions Secrets as `GODADDY_PAT` and never leaves the runner. Logic is in `scripts/dns_sync.py`; the CNAME target is derived from `github.repository_owner`.
 
-The GoDaddy web UI works too and needs no credential at all — reasonable for a one-time setup. `notebooks/90_dns_setup.ipynb` is the same logic for Colab, and is redundant now that the workflow exists.
+The GoDaddy web UI works too and needs no credential at all — reasonable for a one-time change if the workflow is ever unavailable.
 
 ### GoDaddy API facts, verified against this account
 
