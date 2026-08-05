@@ -1,4 +1,4 @@
-# Site and domain reference — audit-agent.ca
+# Site and domain reference — auditagent.ca
 
 ## Contents
 
@@ -15,7 +15,7 @@ site/
 ├── index.html        # What the benchmark is, why it exists, links to repo + dataset
 ├── results.html      # Leaderboard table, generated from results/<run_id>/scored.jsonl
 ├── methodology.html  # Task definitions, label provenance, contamination policy
-├── CNAME             # Contains exactly: audit-agent.ca
+├── CNAME             # Contains exactly: auditagent.ca
 └── assets/
     └── style.css
 ```
@@ -28,7 +28,7 @@ Static HTML only — no build step. The site must be publishable from a browser-
 
 1. Repo settings → Pages → Source: Deploy from a branch.
 2. Branch `main`, folder `/site` (or move `site/` contents to a `gh-pages` branch).
-3. Custom domain: `audit-agent.ca`. This creates/expects `site/CNAME`.
+3. Custom domain: `auditagent.ca`. This creates/expects `site/CNAME`.
 4. Tick **Enforce HTTPS** once the certificate provisions (can take up to 24h after DNS resolves).
 
 The `CNAME` file must contain the bare domain, one line, no protocol, no trailing slash.
@@ -41,7 +41,7 @@ The GoDaddy web UI works too and needs no credential at all — reasonable for a
 
 The v3 API has **no bulk-replace endpoint** — changes are individual `POST` creates and `DELETE`s by `recordId`, authenticated with `Authorization: Bearer <PAT>` against `https://api.godaddy.com/v3/domains`. The older `sso-key KEY:SECRET` scheme is retired; a tutorial using it will fail.
 
-In GoDaddy: My Products → audit-agent.ca → DNS → Manage Zones.
+In GoDaddy: My Products → auditagent.ca → DNS → Manage Zones.
 
 **Delete the GoDaddy parking records first** — the default `A @ → Parked` record and any `CNAME www → @` pointing at GoDaddy's forwarding will otherwise conflict.
 
@@ -76,8 +76,8 @@ The CNAME target excludes the repository name — it is the user/org Pages host,
 ## Verification
 
 ```powershell
-Resolve-DnsName audit-agent.ca -Type A
-Resolve-DnsName www.audit-agent.ca -Type CNAME
+Resolve-DnsName auditagent.ca -Type A
+Resolve-DnsName www.auditagent.ca -Type CNAME
 ```
 
 Expect the four A records and the `.github.io` target. Propagation is usually minutes on a 600 TTL but GoDaddy can take an hour. Do not re-edit records while waiting — repeated changes extend propagation.

@@ -1,4 +1,4 @@
-"""Point audit-agent.ca at GitHub Pages via the GoDaddy Domains API (v3).
+"""Point auditagent.ca at GitHub Pages via the GoDaddy Domains API (v1).
 
 Plans by default; applies only with --apply. Run from GitHub Actions, where the
 token lives in Actions Secrets and never touches a laptop.
@@ -6,12 +6,20 @@ token lives in Actions Secrets and never touches a laptop.
     GODADDY_PAT=... GITHUB_USER=... python scripts/dns_sync.py
     GODADDY_PAT=... GITHUB_USER=... python scripts/dns_sync.py --apply
 
-Only three (name, type) pairs are managed: @/A, @/AAAA, www/CNAME. Everything
-else in the zone — MX, TXT, anything carrying mail or verification — is
+Only three (type, name) pairs are managed: A/@, AAAA/@, CNAME/www. Everything
+else in the zone — MX, TXT, anything carrying mail or domain verification — is
 reported and left alone.
 
-The v3 API has no bulk-replace endpoint, so changes are individual creates and
-deletes.
+## API notes, verified against this account rather than assumed
+
+- **v1, not v3.** The v3 `/v3/domains/zones/{zone}/dns-records` endpoints
+  return 404 for a normal (non-reseller) account. v1 is the surface that works.
+- **Bearer, not sso-key.** `Authorization: Bearer <PAT>`. The older
+  `sso-key KEY:SECRET` scheme returns 401.
+- **PUT replaces every record of one type+name.** `PUT /records/{type}/{name}`
+  with an array body is atomic for that pair, so GoDaddy's parking records for
+  A/@ disappear as a side effect of writing the real ones. No delete pass, and
+  no window where the apex resolves to nothing.
 """
 
 from __future__ import annotations
@@ -22,8 +30,8 @@ import sys
 
 import requests
 
-BASE = "https://api.godaddy.com/v3/domains"
-DOMAIN = "audit-agent.ca"
+BASE = "https://api.godaddy.com/v1/domains"
+DOMAIN = "auditagent.ca"
 
 # GitHub Pages apex addresses. Re-check GitHub's "Managing a custom domain"
 # doc before a first setup — these change rarely, but they do change.
@@ -40,10 +48,10 @@ PAGES_AAAA = [
     "2606:50c0:8003::153",
 ]
 
-# GoDaddy's v3 API rejects a TTL below 600.
+# GoDaddy rejects a TTL below 600.
 TTL = 600
 
-MANAGED = {("@", "A"), ("@", "AAAA"), ("www", "CNAME")}
+MANAGED = {("A", "@"), ("AAAA", "@"), ("CNAME", "www")}
 
 
 def env(name: str) -> str:
@@ -53,43 +61,34 @@ def env(name: str) -> str:
     return value
 
 
-def key(record: dict) -> tuple[str, str, str]:
-    return (record["name"], record["type"], record["data"].rstrip("."))
-
-
 def fmt(record: dict) -> str:
-    return f"  {record['type']:<6} {record['name']:<8} {record['data']:<40} ttl={record.get('ttl')}"
+    return (f"    {record.get('type', '?'):<6} {record.get('name', '?'):<6} "
+            f"{record.get('data', '?'):<40} ttl={record.get('ttl')}")
 
 
 def list_records(session: requests.Session) -> list[dict]:
-    """Every record in the zone, paged."""
-    records: list[dict] = []
-    page = 1
-    while True:
-        resp = session.get(
-            f"{BASE}/zones/{DOMAIN}/dns-records",
-            params={"page": page, "pageSize": 100},
-            timeout=30,
+    resp = session.get(f"{BASE}/{DOMAIN}/records", timeout=30)
+    if resp.status_code == 401:
+        sys.exit("error: GoDaddy rejected the token (401) — expired, or wrong auth scheme.")
+    if resp.status_code == 403:
+        sys.exit("error: token lacks permission for this domain (403).")
+    if resp.status_code == 404:
+        sys.exit(
+            f"error: {DOMAIN} not found in this GoDaddy account (404).\n"
+            f"       The token belongs to an account that does not hold this domain."
         )
-        if resp.status_code == 401:
-            sys.exit("error: GoDaddy rejected the token (401). It may be expired or lack DNS scope.")
-        if resp.status_code == 403:
-            sys.exit("error: token lacks permission for this domain (403).")
-        resp.raise_for_status()
-
-        items = resp.json().get("items", [])
-        records.extend(items)
-        if len(items) < 100:
-            return records
-        page += 1
+    resp.raise_for_status()
+    return resp.json()
 
 
-def desired_records(github_user: str) -> list[dict]:
-    return (
-        [{"name": "@", "type": "A", "data": ip, "ttl": TTL} for ip in PAGES_A]
-        + [{"name": "@", "type": "AAAA", "data": ip, "ttl": TTL} for ip in PAGES_AAAA]
-        + [{"name": "www", "type": "CNAME", "data": f"{github_user}.github.io", "ttl": TTL}]
-    )
+def desired() -> dict[tuple[str, str], list[dict]]:
+    """Target records, grouped by the (type, name) pair each PUT replaces."""
+    github_user = env("GITHUB_USER")
+    return {
+        ("A", "@"): [{"data": ip, "ttl": TTL} for ip in PAGES_A],
+        ("AAAA", "@"): [{"data": ip, "ttl": TTL} for ip in PAGES_AAAA],
+        ("CNAME", "www"): [{"data": f"{github_user}.github.io", "ttl": TTL}],
+    }
 
 
 def main() -> int:
@@ -99,67 +98,70 @@ def main() -> int:
     args = parser.parse_args()
 
     pat = env("GODADDY_PAT")
-    github_user = env("GITHUB_USER")
-
     session = requests.Session()
-    session.headers.update({"Authorization": f"Bearer {pat}", "Accept": "application/json"})
+    session.headers.update({
+        "Authorization": f"Bearer {pat}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    })
 
     current = list_records(session)
-    in_scope = [r for r in current if (r["name"], r["type"]) in MANAGED]
-    out_of_scope = [r for r in current if (r["name"], r["type"]) not in MANAGED]
+    targets = desired()
 
-    desired = desired_records(github_user)
-    desired_keys = {key(d) for d in desired}
-    current_keys = {key(r) for r in in_scope}
+    in_scope = [r for r in current if (r.get("type"), r.get("name")) in MANAGED]
+    out_of_scope = [r for r in current if (r.get("type"), r.get("name")) not in MANAGED]
 
-    to_delete = [r for r in in_scope if key(r) not in desired_keys]
-    to_create = [d for d in desired if key(d) not in current_keys]
+    print(f"Zone: {DOMAIN}   ({len(current)} records total)\n")
 
-    print(f"Zone: {DOMAIN}")
-    print(f"CNAME target: {github_user}.github.io")
-    print()
-    print(f"Untouched ({len(out_of_scope)}) — outside the managed name/type pairs:")
-    for r in sorted(out_of_scope, key=key):
+    print(f"UNTOUCHED — outside the three managed pairs ({len(out_of_scope)}):")
+    for r in sorted(out_of_scope, key=lambda x: (x.get("type", ""), x.get("name", ""))):
         print(fmt(r))
-    print()
-    print(f"DELETE ({len(to_delete)}):")
-    for r in sorted(to_delete, key=key):
-        print(fmt(r))
-    print()
-    print(f"CREATE ({len(to_create)}):")
-    for r in sorted(to_create, key=key):
-        print(fmt(r))
-    print()
-    print(f"Already correct: {len(in_scope) - len(to_delete)}")
 
-    if not to_delete and not to_create:
+    print(f"\nCURRENT state of the managed pairs ({len(in_scope)}):")
+    if not in_scope:
+        print("    (none — apex and www are unset)")
+    for r in sorted(in_scope, key=lambda x: (x.get("type", ""), x.get("name", ""))):
+        print(fmt(r))
+
+    print("\nDESIRED:")
+    changes = []
+    for (rtype, name), records in targets.items():
+        have = sorted(
+            r.get("data", "").rstrip(".")
+            for r in current
+            if r.get("type") == rtype and r.get("name") == name
+        )
+        want = sorted(r["data"].rstrip(".") for r in records)
+        status = "already correct" if have == want else "WILL REPLACE"
+        if have != want:
+            changes.append((rtype, name, records))
+        print(f"  {rtype}/{name}  [{status}]")
+        for r in records:
+            print(f"    {r['data']}  ttl={r['ttl']}")
+
+    if not changes:
         print("\nZone already matches the target. Nothing to do.")
         return 0
 
+    print(f"\n{len(changes)} pair(s) would be replaced. A PUT replaces every record "
+          f"of that type+name, so GoDaddy's parking records for those pairs are "
+          f"removed as part of the write.")
+
     if not args.apply:
-        print("\nPlan only — nothing applied. Re-run with --apply to make these changes.")
+        print("\nPLAN ONLY — nothing applied. Re-run with Apply checked.")
         return 0
 
     print("\nApplying.")
+    for rtype, name, records in changes:
+        resp = session.put(f"{BASE}/{DOMAIN}/records/{rtype}/{name}",
+                           json=records, timeout=30)
+        if not resp.ok:
+            print(f"  FAILED {rtype}/{name}: {resp.status_code} {resp.text[:300]}")
+            resp.raise_for_status()
+        print(f"  wrote {rtype}/{name} ({len(records)} record(s))")
 
-    # Deletes first, so a replaced apex record does not collide with its successor.
-    for record in to_delete:
-        resp = session.delete(
-            f"{BASE}/zones/{DOMAIN}/dns-records/{record['recordId']}", timeout=30
-        )
-        if resp.status_code == 409:
-            # SOA and NS are GoDaddy-managed and cannot be removed.
-            print(f"  skip   {record['type']:<6} {record['name']:<8} {record['data']} (managed)")
-            continue
-        resp.raise_for_status()
-        print(f"  delete {record['type']:<6} {record['name']:<8} {record['data']}")
-
-    for record in to_create:
-        resp = session.post(f"{BASE}/zones/{DOMAIN}/dns-records", json=record, timeout=30)
-        resp.raise_for_status()
-        print(f"  create {record['type']:<6} {record['name']:<8} {record['data']}")
-
-    print("\nApplied. Verify public resolution:")
+    print("\nApplied. Verify public resolution (propagation is usually minutes "
+          "on a 600 TTL):")
     print(f"  dig +short {DOMAIN} A")
     print(f"  dig +short www.{DOMAIN} CNAME")
     return 0

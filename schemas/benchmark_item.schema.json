@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://audit-agent.ca/schemas/benchmark_item.schema.json",
+  "$id": "https://auditagent.ca/schemas/benchmark_item.schema.json",
   "title": "Benchmark item",
   "description": "One released benchmark item, written by 04_build_benchmark to gcs://<bucket>/benchmark/v0.N/. Released versions are immutable.",
   "type": "object",

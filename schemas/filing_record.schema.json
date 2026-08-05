@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://audit-agent.ca/schemas/filing_record.schema.json",
+  "$id": "https://auditagent.ca/schemas/filing_record.schema.json",
   "title": "Filing record",
   "description": "One extracted 10-K Item 9A record, written by 02_extract_item9a to gcs://<bucket>/processed/. Unlabeled.",
   "type": "object",

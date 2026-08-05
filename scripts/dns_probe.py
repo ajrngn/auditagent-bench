@@ -9,7 +9,7 @@ import sys
 
 import requests
 
-DOMAIN = "audit-agent.ca"
+DOMAIN = "auditagent.ca"
 PAT = os.environ.get("GODADDY_PAT", "").strip()
 if not PAT:
     sys.exit("GODADDY_PAT not set")

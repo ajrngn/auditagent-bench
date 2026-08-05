@@ -10,7 +10,7 @@ authors:
     email: "ajrngn@gmail.com"
 
 repository-code: "https://github.com/TODO/auditagent-bench"
-url: "https://audit-agent.ca"
+url: "https://auditagent.ca"
 
 abstract: >-
   AuditAgent Bench evaluates how well large language models perform

@@ -1,6 +1,6 @@
 ---
 name: publishing-results
-description: Drafts the public artifacts for AuditAgent Bench - GitHub README, HuggingFace dataset card, audit-agent.ca site copy, results write-up, and the ISACA-style article. Use when writing documentation, a dataset card, a paper or blog draft, release notes, contamination-policy disclosure, or any text that will be published under the AuditAgent Bench name.
+description: Drafts the public artifacts for AuditAgent Bench - GitHub README, HuggingFace dataset card, auditagent.ca site copy, results write-up, and the ISACA-style article. Use when writing documentation, a dataset card, a paper or blog draft, release notes, contamination-policy disclosure, or any text that will be published under the AuditAgent Bench name.
 ---
 
 # Publishing results

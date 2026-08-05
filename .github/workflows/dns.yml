@@ -1,6 +1,6 @@
 name: DNS sync
 
-# Points audit-agent.ca at GitHub Pages. Manual trigger only — DNS is not
+# Points auditagent.ca at GitHub Pages. Manual trigger only — DNS is not
 # something a push should change.
 #
 # Run it once with "Apply" unchecked to read the plan, then again with it

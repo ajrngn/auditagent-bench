@@ -29,7 +29,7 @@ apps_script/      Google Sheet writeback — the only path that stamps label_sou
 .github/          Pages deploy on push; manual DNS sync
 results/          per-run outputs: manifest.json, scored.jsonl, raw/ (gitignored)
 docs/             dataset card, results write-ups, article drafts
-site/             audit-agent.ca static site (GitHub Pages)
+site/             auditagent.ca static site (GitHub Pages)
 .claude/skills/   agent skills for each pipeline stage
 ```
 
