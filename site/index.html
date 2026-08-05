@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AuditAgent Bench — SOX control evaluation benchmark</title>
+<meta name="description" content="A public benchmark measuring how well large language models evaluate internal controls under SOX 404.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>AuditAgent Bench</h1>
+  <p class="tagline">A public benchmark for LLM evaluation of internal controls under SOX 404.</p>
+  <nav>
+    <a href="index.html" aria-current="page">Overview</a>
+    <a href="results.html">Results</a>
+    <a href="methodology.html">Methodology</a>
+  </nav>
+</header>
+
+<p>Existing financial-domain benchmarks test whether models can find errors in financial statements. None of them test whether a model can evaluate a <strong>control</strong> — judge whether it is designed effectively, classify the severity of a deficiency, or cite the right standard.</p>
+
+<p>AuditAgent Bench measures that. It uses SEC Section 404 material weakness disclosures as labeled data, paired with hand-authored control-design scenarios, across four tasks.</p>
+
+<h2>Tasks</h2>
+
+<h3>A — Deficiency classification</h3>
+<p>Given a disclosed control weakness, assign severity (deficiency, significant deficiency, or material weakness) and the relevant COSO component.</p>
+
+<h3>B — Control design evaluation</h3>
+<p>Given a process narrative and a control description, judge whether the control is designed effectively. If not, identify the gap: segregation of duties, precision, evidence, timeliness, or review.</p>
+
+<h3>C — Clean/dirty discrimination</h3>
+<p>Given a mix of clean and deficient Item 9A disclosures, flag them correctly. The <strong>false-positive rate on clean items is the headline metric</strong> — prior work found error-detection benchmarks where most models flagged nearly every clean input.</p>
+
+<h3>D — Standards citation</h3>
+<p>Given an identified deficiency, cite the correct COSO principle or PCAOB standard.</p>
+
+<h2>Status</h2>
+<p class="pending">Dataset construction in progress. No results have been published yet.</p>
+
+<h2>Data and licensing</h2>
+<p>All source text is public: SEC EDGAR filings, plus synthetic scenarios authored for Task B. Every ground-truth label in a released version is human-reviewed. The dataset is released under CC-BY 4.0; the eval harness under MIT.</p>
+
+<div class="note">
+  Independent research. Not affiliated with, endorsed by, or using data from any employer.
+</div>
+
+<footer>
+  audit-agent.ca · <a href="methodology.html">Methodology</a> · <a href="results.html">Results</a>
+</footer>
+
+</div>
+</body>
+</html>

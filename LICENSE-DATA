@@ -1,0 +1,35 @@
+AuditAgent Bench dataset
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 AuditAgent Bench contributors
+
+This license applies to the dataset only — the benchmark items published under
+gcs://<bucket>/benchmark/ and any mirror of them (HuggingFace, GitHub releases).
+The code and eval harness in this repository are licensed separately under the
+MIT License; see LICENSE.
+
+You are free to share and adapt the dataset for any purpose, including
+commercially, provided you give appropriate credit, link to the license, and
+indicate if changes were made.
+
+Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by/4.0/
+
+ATTRIBUTION AND PROVENANCE
+
+Source text for Tasks A, C, and D is drawn from filings on the U.S. Securities
+and Exchange Commission's EDGAR system. U.S. government works are not subject
+to copyright protection in the United States; the filings themselves are public
+records. What is licensed here is the compilation: the selection of filings, the
+extracted spans, the ground-truth labels, and the paraphrased subset.
+
+Task B items are original works authored for this benchmark.
+
+The COSO Internal Control — Integrated Framework (2013) and PCAOB Auditing
+Standard 2201 are referenced by principle and standard number for the label
+taxonomy. Their text is not reproduced in this dataset and is not covered by
+this license.
+
+When citing, use the CITATION.cff in this repository and include the benchmark
+version. Released versions are immutable; a version number identifies exactly
+which items were used.

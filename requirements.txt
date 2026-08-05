@@ -1,0 +1,18 @@
+# Colab already provides requests, pandas, and beautifulsoup4; they are pinned
+# here so a non-Colab runtime resolves the same versions.
+#
+# Vendor SDKs are intentionally NOT pinned in one list — an eval run installs
+# only the vendor it is calling, so a broken release from one vendor cannot
+# block a run against another.
+
+google-cloud-storage>=2.18,<4
+gspread>=6.1,<7
+jsonschema>=4.23,<5
+beautifulsoup4>=4.12,<5
+requests>=2.32,<3
+pandas>=2.2,<3
+
+# Eval harness — install per run, in the notebook, for the vendor being called:
+#   anthropic>=0.40
+#   google-cloud-aiplatform>=1.70
+#   openai>=1.50

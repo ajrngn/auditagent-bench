@@ -1,0 +1,50 @@
+name: DNS sync
+
+# Points audit-agent.ca at GitHub Pages. Manual trigger only — DNS is not
+# something a push should change.
+#
+# Run it once with "Apply" unchecked to read the plan, then again with it
+# checked. The GoDaddy token comes from Actions Secrets and never leaves the
+# runner.
+#
+# Setup: Settings > Secrets and variables > Actions > New repository secret,
+# named GODADDY_PAT.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply changes (leave unchecked to plan only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install --quiet requests
+
+      - name: Plan
+        if: ${{ !inputs.apply }}
+        run: python scripts/dns_sync.py
+        env:
+          GODADDY_PAT: ${{ secrets.GODADDY_PAT }}
+          # The www CNAME target is <owner>.github.io — read it from the repo
+          # rather than hardcoding, so a rename cannot silently break it.
+          GITHUB_USER: ${{ github.repository_owner }}
+
+      - name: Apply
+        if: ${{ inputs.apply }}
+        run: python scripts/dns_sync.py --apply
+        env:
+          GODADDY_PAT: ${{ secrets.GODADDY_PAT }}
+          GITHUB_USER: ${{ github.repository_owner }}

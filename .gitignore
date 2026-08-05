@@ -1,0 +1,28 @@
+# Secrets — never commit. Keys live in Colab Secrets.
+.env
+.env.*
+*credentials*.json
+service-account*.json
+*.pem
+
+# Local data — raw filings and processed corpora live in GCS, not git
+raw/
+processed/
+*.jsonl.gz
+data/
+
+# Run outputs: manifests and scored files are committed, raw responses are not
+results/*/raw/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/

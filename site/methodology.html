@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methodology — AuditAgent Bench</title>
+<meta name="description" content="How the AuditAgent Bench dataset is built, labeled, and evaluated, including its contamination policy and limitations.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Methodology</h1>
+  <p class="tagline">Dataset construction, labeling, evaluation, and known limits.</p>
+  <nav>
+    <a href="index.html">Overview</a>
+    <a href="results.html">Results</a>
+    <a href="methodology.html" aria-current="page">Methodology</a>
+  </nav>
+</header>
+
+<h2>Data sources</h2>
+<p>Task A, C, and D items are drawn from Item 9A ("Controls and Procedures") of 10-K filings retrieved from SEC EDGAR. Filings disclosing a material weakness are located through EDGAR full-text search; clean filings are sampled alongside them. Task B items are hand-authored control-design scenarios, with LLM-drafted variants that are reviewed before inclusion.</p>
+
+<h2>Labeling</h2>
+<p>Every item carries a <code>label_source</code> field recording how its ground truth was established:</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Value</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>disclosure</code></td><td>Taken from the filer's own characterization in Item 9A</td></tr>
+    <tr><td><code>human</code></td><td>Assigned by a human reviewer</td></tr>
+    <tr><td><code>llm_draft_human_verified</code></td><td>Drafted by a model, reviewed and accepted by a human</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>No item enters a released version without human review. Published results report the breakdown by <code>label_source</code>.</p>
+
+<h2>Contamination policy</h2>
+<p>EDGAR filings are in the training data of every model evaluated here. This is disclosed rather than assumed away, and three mitigations are applied:</p>
+<ol>
+  <li>Filings from recent fiscal years are prioritized, past the training cutoff of most evaluated models.</li>
+  <li>A paraphrased subset of disclosure items is maintained. Both the verbatim and paraphrased scores are reported; the gap between them separates memorization from reasoning.</li>
+  <li>Task B items are synthetic and therefore contamination-free by construction. Task B is the reasoning control group.</li>
+</ol>
+
+<h2>Evaluation</h2>
+<p>One standardized prompt template per task, versioned alongside the dataset. Models are asked for structured JSON output; unparseable responses are recorded as parse failures and reported, not salvaged by pattern-matching the answer out of prose. Every model runs on the full item set — no sampling. Every raw response is retained.</p>
+
+<p>Model versions are pinned to full identifiers and recorded with each result. A change to a prompt template produces a new results version; scores are never compared across prompt versions.</p>
+
+<h2>Limitations</h2>
+<ul>
+  <li>English-language filings from US registrants only.</li>
+  <li>Version 1 excludes IT general control scenarios.</li>
+  <li>No fine-tuning, tool-use, or multi-agent evaluation.</li>
+  <li>Task A labels derived from disclosures inherit the filer's own severity characterization, which is a judgment made under disclosure incentives.</li>
+  <li>Clean filings are presumed clean because no weakness was disclosed — an absence of disclosure, not an independent verification.</li>
+</ul>
+
+<h2>Licensing</h2>
+<p>Dataset: CC-BY 4.0. Code and eval harness: MIT. COSO and PCAOB frameworks are referenced for taxonomy and cited by principle or standard number; their text is not reproduced.</p>
+
+<footer>
+  audit-agent.ca · <a href="index.html">Overview</a> · <a href="results.html">Results</a>
+</footer>
+
+</div>
+</body>
+</html>

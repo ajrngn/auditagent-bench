@@ -1,0 +1,14 @@
+# Normalize to LF in the repo. Working copies on Windows still get CRLF where
+# the editor wants it, but everything committed is LF — which matters for the
+# GitHub Pages CNAME file and for anything the Actions runners execute.
+* text=auto eol=lf
+
+# Notebooks are JSON; diffing them is noisy but not meaningless.
+*.ipynb text eol=lf
+
+# Never touched by line-ending normalization.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.gz binary
+*.zip binary

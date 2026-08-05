@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//C:/Auditagent/**)",
+      "Edit(//C:/Auditagent/**)",
+      "WebFetch(domain:www.sec.gov)",
+      "WebFetch(domain:efts.sec.gov)",
+      "WebFetch(domain:data.sec.gov)",
+      "WebFetch(domain:platform.claude.com)",
+      "WebFetch(domain:docs.github.com)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git remote:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git config --get:*)"
+    ],
+    "deny": [
+      "Read(//C:/Auditagent/**/.env)",
+      "Read(//C:/Auditagent/**/*credentials*.json)",
+      "Edit(//C:/Auditagent/benchmark/**)",
+      "Edit(//C:/Auditagent/site/results.html)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git rebase:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git filter-repo:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout -- :*)",
+      "Bash(git restore:*)",
+      "Bash(git reflog delete:*)",
+      "Bash(git update-ref -d:*)"
+    ]
+  }
+}

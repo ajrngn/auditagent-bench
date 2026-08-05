@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://audit-agent.ca/schemas/filing_record.schema.json",
+  "title": "Filing record",
+  "description": "One extracted 10-K Item 9A record, written by 02_extract_item9a to gcs://<bucket>/processed/. Unlabeled.",
+  "type": "object",
+  "required": [
+    "accession_number",
+    "cik",
+    "company_name",
+    "form_type",
+    "fiscal_year",
+    "filing_date",
+    "source_url",
+    "item_9a_text",
+    "extraction_method",
+    "fetched_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "accession_number": {
+      "type": "string",
+      "pattern": "^[0-9]{10}-[0-9]{2}-[0-9]{6}$",
+      "description": "Primary key. The only stable unique identifier for a filing."
+    },
+    "cik": { "type": "string", "pattern": "^[0-9]{1,10}$" },
+    "company_name": { "type": "string", "minLength": 1 },
+    "form_type": { "type": "string", "enum": ["10-K", "10-K/A", "10-KT"] },
+    "fiscal_year": { "type": "integer", "minimum": 1994, "maximum": 2100 },
+    "filing_date": { "type": "string", "format": "date" },
+    "source_url": { "type": "string", "format": "uri" },
+    "item_9a_text": {
+      "type": "string",
+      "minLength": 500,
+      "description": "Extracted Item 9A span. Records failing the minimum length are diverted to the extraction-failure list, never truncated into processed/."
+    },
+    "extraction_method": {
+      "type": "string",
+      "enum": ["heading_to_next_item", "manual"],
+      "description": "How the span boundaries were found. Recorded so a parser change can be traced."
+    },
+    "fetched_at": { "type": "string", "format": "date-time" },
+    "sic_code": { "type": "string" },
+    "filer_status": {
+      "type": "string",
+      "enum": ["large_accelerated", "accelerated", "non_accelerated", "smaller_reporting", "unknown"],
+      "description": "Affects whether an auditor attestation on ICFR was required."
+    }
+  }
+}

@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: "AuditAgent Bench: a benchmark for LLM evaluation of internal controls under SOX 404"
+message: "If you use this benchmark, please cite it and state which version you used."
+type: dataset
+
+# TODO: replace with the legal name to publish under before the first release.
+authors:
+  - given-names: "TODO"
+    family-names: "TODO"
+    email: "ajrngn@gmail.com"
+
+repository-code: "https://github.com/TODO/auditagent-bench"
+url: "https://audit-agent.ca"
+
+abstract: >-
+  AuditAgent Bench evaluates how well large language models perform
+  internal-control assessment tasks under Section 404 of the Sarbanes-Oxley Act.
+  It comprises four tasks: deficiency severity classification and COSO component
+  assignment, control design evaluation, clean/deficient discrimination over
+  Item 9A disclosures, and standards citation. Items for three of the four tasks
+  are derived from material weakness disclosures in SEC EDGAR 10-K filings;
+  control design items are synthetic and hand-labeled. Every ground-truth label
+  in a released version is human-reviewed. The headline metric is the
+  false-positive rate on clean disclosures.
+
+keywords:
+  - internal control
+  - SOX 404
+  - internal audit
+  - benchmark
+  - large language models
+  - evaluation
+  - COSO
+  - SEC EDGAR
+
+license: CC-BY-4.0
+license-url: "https://creativecommons.org/licenses/by/4.0/"
+
+# TODO: set on first release. Version must match the immutable benchmark prefix
+# (benchmark/v0.1/), and date-released must be the date that prefix was written.
+version: "UNRELEASED"
+date-released: "UNKNOWN"

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://audit-agent.ca/schemas/benchmark_item.schema.json",
+  "title": "Benchmark item",
+  "description": "One released benchmark item, written by 04_build_benchmark to gcs://<bucket>/benchmark/v0.N/. Released versions are immutable.",
+  "type": "object",
+  "required": ["item_id", "task", "input", "label", "label_source", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "pattern": "^[A-D]-[0-9]{4}$",
+      "description": "Task letter plus zero-padded ordinal, e.g. C-0142."
+    },
+    "task": { "type": "string", "enum": ["A", "B", "C", "D"] },
+
+    "input": {
+      "type": "object",
+      "description": "What the model sees. Shape varies by task.",
+      "properties": {
+        "disclosure_text": { "type": "string", "description": "Tasks A, C, D" },
+        "process_narrative": { "type": "string", "description": "Task B" },
+        "control_description": { "type": "string", "description": "Task B" }
+      }
+    },
+
+    "label": {
+      "type": "object",
+      "description": "Ground truth. Keys populated depend on task.",
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["deficiency", "significant_deficiency", "material_weakness"],
+          "description": "Task A"
+        },
+        "coso_component": {
+          "type": "string",
+          "enum": [
+            "control_environment",
+            "risk_assessment",
+            "control_activities",
+            "information_and_communication",
+            "monitoring_activities"
+          ],
+          "description": "Tasks A, D"
+        },
+        "designed_effectively": { "type": "boolean", "description": "Task B" },
+        "gap_type": {
+          "type": "string",
+          "enum": [
+            "segregation_of_duties",
+            "precision",
+            "evidence",
+            "timeliness",
+            "management_review",
+            "access"
+          ],
+          "description": "Task B, required when designed_effectively is false"
+        },
+        "is_deficient": { "type": "boolean", "description": "Task C" },
+        "citation": {
+          "type": "string",
+          "description": "Task D. COSO principle number or PCAOB standard reference. Never verbatim framework text."
+        }
+      }
+    },
+
+    "label_source": {
+      "type": "string",
+      "enum": ["disclosure", "human", "llm_draft_human_verified"],
+      "description": "Provenance of the ground truth. 'llm_draft' is NOT a valid released value — 04_build_benchmark hard-fails on it. Only the reviewer-triggered Apps Script path may write 'llm_draft_human_verified'."
+    },
+
+    "reviewed_at": { "type": "string", "format": "date-time" },
+    "reviewer_notes": { "type": "string" },
+
+    "paraphrased": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for contamination-control twins of verbatim items."
+    },
+    "paraphrase_of": {
+      "type": "string",
+      "description": "item_id of the verbatim twin. Required when paraphrased is true."
+    },
+
+    "provenance": {
+      "type": "object",
+      "required": ["origin"],
+      "properties": {
+        "origin": { "type": "string", "enum": ["edgar", "synthetic"] },
+        "source_url": { "type": "string", "format": "uri" },
+        "accession_number": { "type": "string" },
+        "cik": { "type": "string" },
+        "fiscal_year": { "type": "integer" }
+      },
+      "description": "origin=edgar requires source_url, accession_number, cik, and fiscal_year."
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "paraphrased": { "const": true } }, "required": ["paraphrased"] },
+      "then": { "required": ["paraphrase_of"] }
+    },
+    {
+      "if": {
+        "properties": { "provenance": { "properties": { "origin": { "const": "edgar" } } } }
+      },
+      "then": {
+        "properties": {
+          "provenance": {
+            "required": ["source_url", "accession_number", "cik", "fiscal_year"]
+          }
+        }
+      }
+    }
+  ]
+}
