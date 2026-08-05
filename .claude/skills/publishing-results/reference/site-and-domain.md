@@ -39,7 +39,15 @@ Preferred path is the **DNS sync workflow**: Actions tab → "DNS sync" → Run 
 
 The GoDaddy web UI works too and needs no credential at all — reasonable for a one-time setup. `notebooks/90_dns_setup.ipynb` is the same logic for Colab, and is redundant now that the workflow exists.
 
-The v3 API has **no bulk-replace endpoint** — changes are individual `POST` creates and `DELETE`s by `recordId`, authenticated with `Authorization: Bearer <PAT>` against `https://api.godaddy.com/v3/domains`. The older `sso-key KEY:SECRET` scheme is retired; a tutorial using it will fail.
+### GoDaddy API facts, verified against this account
+
+Established by probing the live API, not read from docs — the docs sent us the wrong way twice:
+
+- **Use v1, not v3.** `https://api.godaddy.com/v1/domains`. The v3 `/v3/domains/zones/{zone}/dns-records` endpoints return 404 for a normal (non-reseller) account, even though GoDaddy's current OpenAPI spec documents them.
+- **`Authorization: Bearer <PAT>`.** The older `sso-key KEY:SECRET` scheme returns 401 on every endpoint.
+- **`PUT /v1/domains/{domain}/records/{type}/{name}`** replaces every record of that type+name atomically, with an array body of `{data, ttl}`. This is why `dns_sync.py` has no delete pass: the parking records for a managed pair are removed as a side effect of writing the real ones, and the apex never resolves to nothing mid-change.
+- **TTL floor is 600.** Lower values are rejected.
+- A 404 reading records with a valid token means **the domain is not in that account**. `GET /v1/domains` lists what the token can actually see — the fastest way to diagnose it.
 
 In GoDaddy: My Products → auditagent.ca → DNS → Manage Zones.
 
