@@ -44,8 +44,24 @@ for scheme_name, header_value in SCHEMES.items():
             print(f"  {label:<20} ERROR {type(exc).__name__}")
             continue
 
-        body = resp.text[:180].replace("\n", " ")
         marker = "  <-- WORKS" if resp.status_code == 200 else ""
         print(f"  {label:<20} {resp.status_code}{marker}")
+
         if resp.status_code != 200:
-            print(f"      {body}")
+            print(f"      {resp.text[:180]}".replace("\n", " "))
+            continue
+
+        # On success, show what the account actually contains. Domain names
+        # are not secret; this is the whole point of the diagnostic.
+        if label == "v1 list domains":
+            try:
+                domains = resp.json()
+            except Exception:
+                print(f"      {resp.text[:200]}")
+                continue
+            print(f"      {len(domains)} domain(s) in this account:")
+            for d in domains:
+                print(f"        {d.get('domain')}  status={d.get('status')} "
+                      f"expires={str(d.get('expires'))[:10]}")
+        else:
+            print(f"      {resp.text[:200]}".replace("\n", " "))
