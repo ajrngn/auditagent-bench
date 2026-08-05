@@ -64,11 +64,26 @@ def parse_json_response(text: str, required_keys: set[str] | None = None) -> Par
 # Filers write "ITEM 9A.", "Item 9A(T)", and variants separated by non-breaking
 # spaces. Match the number and optional (T) suffix, tolerate any separator.
 _ITEM_9A = re.compile(r"item\s*9A\s*\(?T?\)?\s*[.\-—:]?", re.IGNORECASE)
-_NEXT_ITEM = re.compile(r"item\s*9B\s*[.\-—:]?|item\s*10\s*[.\-—:]?", re.IGNORECASE)
+
+# What can follow Item 9A. Item 9B and 9C are the usual boundaries, but many
+# filings run straight into Part III, and amendments often end at the
+# signature block with no further item heading at all.
+_NEXT_ITEM = re.compile(
+    r"item\s*9B\s*[.\-—:]?"
+    r"|item\s*9C\s*[.\-—:]?"
+    r"|item\s*10\s*[.\-—:]?"
+    r"|part\s+I{2,}I?V?\b"
+    r"|^\s*signatures?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 # Below this length the match is a table-of-contents entry or a cross-reference,
 # not the section itself.
 MIN_ITEM_9A_CHARS = 500
+
+# Ceiling for the no-boundary fallback. Item 9A is a short section; anything
+# past this means the heading matched something that was not the section.
+MAX_ITEM_9A_CHARS = 60_000
 
 
 class ExtractionFailure(Exception):
@@ -86,11 +101,15 @@ def filing_text(html: str) -> str:
     return re.sub(r"[   ]", " ", text)
 
 
-def extract_item_9a(html: str) -> str:
+def extract_item_9a(html: str) -> tuple[str, str]:
     """Extract the Item 9A span from filing HTML.
 
-    Raises ExtractionFailure rather than returning a partial or fallback span.
-    The caller writes the failure and its reason to an extraction-failure list.
+    Returns (text, extraction_method). The method is recorded on the output
+    record so a later parser change can be traced, and so the two cases can be
+    counted separately — a corpus that is mostly `heading_to_end` needs review.
+
+    Raises ExtractionFailure rather than returning a partial span. The caller
+    writes the failure and its reason to an extraction-failure list.
     """
     text = filing_text(html)
 
@@ -101,12 +120,16 @@ def extract_item_9a(html: str) -> str:
     # The last occurrence is the section; earlier ones are the table of contents.
     for start in reversed(starts):
         next_item = _NEXT_ITEM.search(text, start)
-        if not next_item:
-            continue
-        span = text[start : next_item.start()].strip()
-        if len(span) >= MIN_ITEM_9A_CHARS:
-            return re.sub(r"\n{3,}", "\n\n", span)
+        if next_item:
+            span = text[start : next_item.start()].strip()
+            method = "heading_to_next_item"
+        else:
+            # Amendments and some originals end at Item 9A with no further
+            # heading. Take the remainder, capped.
+            span = text[start : start + MAX_ITEM_9A_CHARS].strip()
+            method = "heading_to_end"
 
-    raise ExtractionFailure(
-        f"no_span_over_{MIN_ITEM_9A_CHARS}_chars_before_next_item"
-    )
+        if len(span) >= MIN_ITEM_9A_CHARS:
+            return re.sub(r"\n{3,}", "\n\n", span), method
+
+    raise ExtractionFailure(f"no_span_over_{MIN_ITEM_9A_CHARS}_chars")

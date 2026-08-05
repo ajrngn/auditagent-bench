@@ -36,8 +36,8 @@
     },
     "extraction_method": {
       "type": "string",
-      "enum": ["heading_to_next_item", "manual"],
-      "description": "How the span boundaries were found. Recorded so a parser change can be traced."
+      "enum": ["heading_to_next_item", "heading_to_end", "manual"],
+      "description": "How the span boundaries were found. Recorded so a parser change can be traced, and so heading_to_end records — where no following item heading existed and the span was taken to a length cap — can be counted and reviewed separately."
     },
     "fetched_at": { "type": "string", "format": "date-time" },
     "sic_code": { "type": "string" },

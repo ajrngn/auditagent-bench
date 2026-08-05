@@ -112,6 +112,34 @@ def full_text_search(
             return
 
 
+def hit_to_record(hit: dict) -> dict:
+    """Map a full-text search hit to the fields the pipeline needs.
+
+    The hit `_id` is "<accession>:<filename>", which names the exact document
+    that matched — more reliable than scanning the filing index for a likely
+    primary document.
+
+    Note `root_forms` is a list and describes the *base* form: a 10-K/A
+    amendment has root_forms ["10-K"]. Use `form` for the actual type, and
+    filter amendments explicitly if the sample should exclude them.
+    """
+    src = hit["_source"]
+    accession_raw, _, filename = hit["_id"].partition(":")
+    accession = normalize_accession(src.get("adsh") or accession_raw)
+    cik = str(src["ciks"][0]).lstrip("0")
+    root_forms = src.get("root_forms") or []
+
+    return {
+        "accession_number": accession,
+        "cik": cik,
+        "company_name": src["display_names"][0],
+        "filing_date": src["file_date"],
+        "form_type": src.get("form") or (root_forms[0] if root_forms else "UNKNOWN"),
+        "root_form": root_forms[0] if root_forms else "UNKNOWN",
+        "source_url": document_url(cik, accession, filename) if filename else None,
+    }
+
+
 def submissions(cik: str | int) -> dict:
     """Filing history for a CIK, including the recent-filings index."""
     return get(SUBMISSIONS.format(cik=int(cik))).json()
