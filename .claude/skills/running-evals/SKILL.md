@@ -52,14 +52,24 @@ Validate the parsed object against the task's expected keys before scoring. An u
 
 | Task | Primary metric | Also report |
 |---|---|---|
-| A — Deficiency classification | Accuracy vs. severity label | 3x3 severity confusion matrix; COSO component accuracy |
-| B — Control design evaluation | Accuracy on designed-effectively | Gap-type accuracy (SoD / precision / evidence / timeliness) |
-| C — Clean/dirty discrimination | **False-positive rate on clean items** (headline) | Recall on deficient items, F1 |
+| A — Deficiency classification | **COSO component accuracy** | 5x5 component confusion matrix; severity accuracy **on `gradient_bearing` items only** |
+| B — Control design evaluation | Accuracy on designed-effectively | Gap-type accuracy; **per-pair consistency** (share of minimal pairs where both halves are correct) |
+| C — Clean/dirty discrimination | **FP rate on `attested` clean items** (headline) | FP rate on `management_only` clean items; recall on deficient items; F1 |
 | D — Standards citation | Citation precision | Hallucinated-citation rate |
+
+### Three subsetting rules that are not optional
+
+**Task A severity is scored on `gradient_bearing` items only.** Disclosure rules compel material weaknesses alone, so severity across the full corpus measures the sampling frame rather than the model. Report the count of scored items next to the score.
+
+**Task C's headline FP rate is the `attested` subset.** A clean label is absence of disclosure, not absence of deficiency. Where an auditor attested to ICFR, a false positive means what the word implies; where it is management's assertion alone, it is a weaker claim. Report both, headline the first, and never pool them into one number.
+
+**Task B's most informative metric is per-pair consistency, not accuracy.** A model can reach high Task B accuracy while flipping on minimal pairs — which shows it is keying on surrounding language rather than the control. Pair consistency separates those.
 
 Task C's FP rate is the headline number for the whole benchmark. FinVerBench reported 95–100% FP rates on clean financial statements; the open question is whether that holds for controls. Report it prominently even when it is unflattering.
 
 Always report the paraphrased-subset score alongside the verbatim score (contamination control), and treat Task B as the contamination-free reasoning baseline.
+
+**Split synthetic results by `drafted_by`.** If items drafted by a vendor's model favour that vendor, that belongs in the results table, not a methods footnote.
 
 ## Cost and failure handling
 

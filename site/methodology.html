@@ -21,7 +21,26 @@
 </header>
 
 <h2>Data sources</h2>
-<p>Task A, C, and D items are drawn from Item 9A ("Controls and Procedures") of 10-K filings retrieved from SEC EDGAR. Filings disclosing a material weakness are located through EDGAR full-text search; clean filings are sampled alongside them. Task B items are hand-authored control-design scenarios, with LLM-drafted variants that are reviewed before inclusion.</p>
+<p>Tasks A, C, and D draw on ICFR disclosures retrieved from SEC EDGAR: Item 9A of a 10-K, Item 15 of a 20-F, and the equivalent section of a 40-F. Foreign private issuers filing 20-F and 40-F are registrants complying with SOX rather than with their home regime, so they broaden the company population without changing the regulatory one. Every item records its own <code>jurisdiction</code> and <code>regime</code>.</p>
+
+<p>Task A also draws on Single Audit findings from the Federal Audit Clearinghouse. These are internal control over federal award compliance rather than ICFR in the Section 404 sense — a distinct sub-population, tagged as such and reported separately. They are included because they carry something SEC filings cannot: findings explicitly classified as material weakness or significant deficiency.</p>
+
+<p>Task B items are hand-authored control-design scenarios, including minimal pairs — two scenarios identical except for one deliberate change. LLM-drafted variants are reviewed before inclusion, and every synthetic item records which model drafted it.</p>
+
+<h2>Why severity is only scored on part of the corpus</h2>
+<p>SEC rules compel public disclosure of material weaknesses. Significant deficiencies are reported to the audit committee, and lesser deficiencies are not reported at all. A severity label taken from a periodic filing is therefore almost always "material weakness" — not because that reflects the distribution of real deficiencies, but because it is the only tier the disclosure regime surfaces.</p>
+
+<p>Severity is scored only on items whose source could have expressed a different tier: Single Audit findings and synthetic scenarios. Task A's primary label is the COSO component, which is well-populated across every source and is jurisdiction-neutral.</p>
+
+<h2>Why clean items are rated, not just counted</h2>
+<p>The two labels in Task C are not equally strong. A deficient label comes from management stating a material weakness. A clean label comes from nobody having said anything — absence of disclosure, not absence of deficiency.</p>
+
+<p>This matters because the false-positive rate on clean items is the headline metric. If a model flags a filing that management called effective but which was later restated, that is not a false positive; the model may be right and the label wrong. Two controls apply:</p>
+
+<ul>
+  <li>Filings later contradicted by an Item 4.02 8-K ("Non-Reliance on Previously Issued Financial Statements"), or by a subsequent-period material weakness covering the same period, are excluded from the clean pool entirely.</li>
+  <li>Remaining clean items are rated <code>attested</code> where a registered public accounting firm issued an ICFR opinion behind the assertion, or <code>management_only</code> where the assertion is management's alone. The headline false-positive rate is reported on the attested subset; the management-only rate is reported alongside and labelled as the weaker measurement it is.</li>
+</ul>
 
 <h2>Labeling</h2>
 <p>Every item carries a <code>label_source</code> field recording how its ground truth was established:</p>
@@ -49,6 +68,8 @@
   <li>Task B items are synthetic and therefore contamination-free by construction. Task B is the reasoning control group.</li>
 </ol>
 
+<p>Synthetic authorship carries its own conflict: a model that drafts scenarios should not be evaluated on them without that being visible. Every synthetic item records the model that drafted it, and results are reported split by drafting model.</p>
+
 <h2>Evaluation</h2>
 <p>One standardized prompt template per task, versioned alongside the dataset. Models are asked for structured JSON output; unparseable responses are recorded as parse failures and reported, not salvaged by pattern-matching the answer out of prose. Every model runs on the full item set — no sampling. Every raw response is retained.</p>
 
@@ -56,11 +77,13 @@
 
 <h2>Limitations</h2>
 <ul>
-  <li>English-language filings from US registrants only.</li>
+  <li>English-language filings only. Version 1 is predominantly SOX-404 reporting, including foreign registrants who file under it.</li>
   <li>Version 1 excludes IT general control scenarios.</li>
   <li>No fine-tuning, tool-use, or multi-agent evaluation.</li>
-  <li>Task A labels derived from disclosures inherit the filer's own severity characterization, which is a judgment made under disclosure incentives.</li>
-  <li>Clean filings are presumed clean because no weakness was disclosed — an absence of disclosure, not an independent verification.</li>
+  <li>Task A labels derived from disclosures inherit the filer's own severity characterization, which is a judgment made under disclosure incentives. This is why severity is scored only on gradient-bearing sources.</li>
+  <li>Clean labels remain an absence of disclosure rather than an independent verification. Restatement exclusion and attestation rating narrow the problem; they do not eliminate it. A company with an undisclosed and never-restated weakness still sits in the clean pool.</li>
+  <li>Single Audit findings concern internal control over federal award compliance, which overlaps with but is not identical to ICFR under Section 404.</li>
+  <li>Synthetic scenarios are cleaner and better organized than real disclosure prose. A model may perform differently on them for stylistic reasons alone.</li>
 </ul>
 
 <h2>Licensing</h2>

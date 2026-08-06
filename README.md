@@ -1,8 +1,10 @@
 # AuditAgent Bench
 
-A public benchmark evaluating how well large language models perform internal-control (SOX 404) assessment tasks.
+A public benchmark evaluating how well large language models perform **internal control over financial reporting (ICFR)** assessment tasks.
 
-Existing financial benchmarks (AuditBench, FinVerBench) test error detection in financial statements. This one tests **control evaluation**: deficiency classification, control design assessment, clean/dirty discrimination, and standards citation — using SEC Section 404 material weakness disclosures as labeled data.
+Existing financial benchmarks (AuditBench, FinVerBench) test error detection in financial statements. This one tests **control evaluation**: deficiency classification, control design assessment, clean/dirty discrimination, and standards citation.
+
+The framing is ICFR rather than SOX. SOX 404 is one jurisdiction's mechanism for a concept that also exists under NI 52-109 in Canada, J-SOX in Japan, and Uniform Guidance for federal award recipients. COSO underlies all of them, so the taxonomy is anchored on COSO components rather than on any single regime's severity language. Every item records its own `jurisdiction` and `regime`. v1 sources are predominantly SOX-404 — including 20-F and 40-F filers, who are foreign registrants complying with SOX rather than with their home regime.
 
 **Status:** dataset construction. No benchmark version released yet.
 
@@ -10,12 +12,18 @@ Existing financial benchmarks (AuditBench, FinVerBench) test error detection in 
 
 | Task | Input | Output | Source |
 |---|---|---|---|
-| A | Disclosed control weakness | Severity + COSO component | EDGAR Item 9A |
-| B | Process narrative + control description | Designed effectively? + gap type | Synthetic, hand-labeled |
-| C | Mixed clean and deficient Item 9A text | Deficient / clean flag | EDGAR Item 9A |
-| D | Identified deficiency | COSO principle / PCAOB standard citation | EDGAR Item 9A |
+| A | Described deficiency | **COSO component** + severity | SEC filings, Single Audit findings, synthetic |
+| B | Process narrative + control description | Designed effectively? + gap type | Synthetic, hand-labeled, incl. minimal pairs |
+| C | Mixed clean and deficient disclosure text | Deficient / clean flag | SEC filings |
+| D | Identified deficiency | COSO principle / PCAOB standard citation | SEC filings |
 
 Task C's **false-positive rate on clean items** is the headline metric.
+
+Three subsetting rules make those numbers mean what they say:
+
+- **Task A severity is scored only on gradient-bearing items.** SEC rules compel disclosure of material weaknesses alone, so severity taken from periodic filings is near-degenerate. Severity is scored on Single Audit findings and synthetic scenarios, where the source could have expressed a different tier. COSO component — well-populated everywhere — is the primary label.
+- **Task C's headline FP rate is the attested subset.** A clean label means nobody disclosed a weakness, which is not the same as no weakness existing. Where an auditor attested to ICFR, a false positive means what the word implies; where it is management's assertion alone, the claim is weaker. Both are reported, never pooled. Filings later contradicted by an Item 4.02 8-K are excluded outright.
+- **Task B reports per-pair consistency, not just accuracy.** Minimal pairs differ by one deliberate change. A model can score well on Task B while flipping between halves — which shows it is keying on surrounding language rather than on the control.
 
 ## Repository layout
 

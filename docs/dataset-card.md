@@ -92,7 +92,7 @@ EDGAR filings are in the training data of every model this benchmark evaluates. 
 
 Intended for evaluating and comparing model performance on internal-control assessment, and for research on where such models fail.
 
-**Not intended** as a substitute for professional judgment in an actual SOX 404 assessment, as evidence in an audit, or as a source of authoritative interpretation of COSO or PCAOB standards.
+**Not intended** as a substitute for professional judgment in an actual ICFR assessment, as evidence in an audit, or as a source of authoritative interpretation of COSO or PCAOB standards.
 
 ## Licensing
 

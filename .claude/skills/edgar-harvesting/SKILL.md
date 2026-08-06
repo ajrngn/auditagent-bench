@@ -62,12 +62,40 @@ Measured on 8 original 10-Ks: **8/8 extracted**, but of those —
 
 Expect yield from a 500-filing pull to be well below 500. Flag records at the length cap and records under ~2,000 characters for review before they reach the labeling sheet.
 
+## Beyond the 10-K: three more EDGAR surfaces
+
+**20-F and 40-F.** Foreign private issuers registered with the SEC file management's ICFR report under the same rules and the same COSO 2013 criteria, with auditor attestation for non-EGC accelerated and large accelerated filers. 40-F is the MJDS form used by Canadian issuers.
+
+This is how international coverage is obtained. It costs new heading logic and nothing else — no new API, no new auth, no scraping. Be precise about what the sample *is*: a 40-F filer is a Canadian company complying with **SOX**, not with NI 52-109. That broadens the company population, not the regulatory population, and the record carries `jurisdiction: CA` with `regime: sox_404` to keep the two from being conflated.
+
+The ICFR section sits at a different place per form — `icfr_item` records which, so a parser regression can be traced to the form it broke on:
+
+| Form | Section | `icfr_item` |
+|---|---|---|
+| 10-K | Item 9A | `item_9a` |
+| 20-F | Item 15 | `item_15` |
+| 40-F | Controls disclosure, outside the numbered-item scheme | `form_40f_controls` |
+
+Boundary headings differ per form. The current extractor's boundaries are 10-K specific; 20-F and 40-F need their own before those forms are fetched.
+
+**Item 4.02 8-K — non-reliance.** "Non-Reliance on Previously Issued Financial Statements." A 4.02 filed after a clean 10-K is direct evidence the clean assertion was wrong. Set `subsequent_non_reliance` and record the contradicting accession, so the exclusion is auditable rather than asserted.
+
+This is not optional polish. Task C's headline metric is the false-positive rate on clean items, and a restated filing sitting in the clean pool means a model that correctly flags it gets scored as wrong. See the clean-label policy in `CLAUDE.md`.
+
+**Comment letters — `UPLOAD` and `CORRESP`.** Staff letters to filers and filer responses, released roughly 20 business days after review completes. Search via full-text search with the **"Filing review correspondence"** filing category.
+
+These are cases where SEC staff *questioned a filer's own ICFR conclusion*, with reasoning attached — a documented third-party disagreement with a management assertion, which nothing else in the pipeline provides.
+
 ## Required fields on every record
 
-`source_url`, `accession_number`, `cik`, `company_name`, `fiscal_year`, `form_type`, `filing_date`, `icfr_text`, `extraction_method`, `fetched_at`.
+`source_url`, `accession_number`, `cik`, `company_name`, `fiscal_year`, `form_type`, `jurisdiction`, `regime`, `filing_date`, `icfr_text`, `icfr_item`, `extraction_method`, `fetched_at`.
+
+Record `auditor_attested` and `filer_status` where determinable — they drive `clean_confidence` downstream, and a management-only assertion is a materially weaker evidence standard than an attested one.
 
 Labels are **not** assigned here. Stage 01/02 produce unlabeled text only — labeling happens in `03_labeling_sync`. See the `labeling-controls` skill.
 
 ## Sampling targets (v1)
 
-~500 filings: ~250 disclosing a material weakness (found via full-text search for "material weakness", form type 10-K) and ~250 clean. Prioritize fiscal years 2025–2026 for the contamination policy. Record the search query used in the run manifest — the sample must be reproducible.
+~500 filings: ~250 disclosing a material weakness (found via full-text search for "material weakness") and ~250 clean. Prioritize fiscal years 2025–2026 for the contamination policy. Record the search query used in the run manifest — the sample must be reproducible.
+
+Run **20 filings first, not 500.** The measured yield on a sample of 8 was 8/8 extracted but only 5 usable. Twenty tells you the real rate before committing to a long pull, and the rate is what determines whether ~500 filings reaches the 300–400 item target.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AuditAgent Bench — SOX control evaluation benchmark</title>
-<meta name="description" content="A public benchmark measuring how well large language models evaluate internal controls under SOX 404.">
+<meta name="description" content="A public benchmark measuring how well large language models evaluate internal control over financial reporting.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
 
 <header>
   <h1>AuditAgent Bench</h1>
-  <p class="tagline">A public benchmark for LLM evaluation of internal controls under SOX 404.</p>
+  <p class="tagline">A public benchmark for LLM evaluation of internal control over financial reporting.</p>
   <nav>
     <a href="index.html" aria-current="page">Overview</a>
     <a href="results.html">Results</a>
@@ -22,7 +22,9 @@
 
 <p>Existing financial-domain benchmarks test whether models can find errors in financial statements. None of them test whether a model can evaluate a <strong>control</strong> — judge whether it is designed effectively, classify the severity of a deficiency, or cite the right standard.</p>
 
-<p>AuditAgent Bench measures that. It uses SEC Section 404 material weakness disclosures as labeled data, paired with hand-authored control-design scenarios, across four tasks.</p>
+<p>AuditAgent Bench measures that. It draws on SEC filings, Single Audit findings, and hand-authored control scenarios, across four tasks.</p>
+
+<p>The framing is ICFR rather than SOX. SOX 404 is one jurisdiction&rsquo;s mechanism for a concept that also exists under NI 52-109 in Canada and Uniform Guidance for federal award recipients. COSO underlies all of them, so the taxonomy is anchored on COSO components rather than any single regime&rsquo;s severity language.</p>
 
 <h2>Tasks</h2>
 

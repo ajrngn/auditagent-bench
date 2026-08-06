@@ -1,8 +1,10 @@
-# CLAUDE.md — SOX Control Evaluation Benchmark ("AuditAgent Bench")
+# CLAUDE.md — ICFR Evaluation Benchmark ("AuditAgent Bench")
 
 ## Project Overview
 
-A public benchmark evaluating how well LLMs perform internal-control (SOX 404) assessment tasks — the internal audit analog to financial-statement benchmarks like AuditBench and FinVerBench, which cover statement/numerical error detection but not control design or operating-effectiveness evaluation.
+A public benchmark evaluating how well LLMs perform **internal control over financial reporting (ICFR)** assessment tasks — the internal audit analog to financial-statement benchmarks like AuditBench and FinVerBench, which cover statement/numerical error detection but not control design or operating-effectiveness evaluation.
+
+**Framing is ICFR, not SOX.** SOX 404 is one jurisdiction's mechanism for a concept that exists under NI 52-109 in Canada, J-SOX in Japan, and Uniform Guidance for federal award recipients. COSO underlies all of them, which is why the taxonomy is anchored on COSO components rather than on any regime's severity language. Every item records its own `jurisdiction` and `regime`; nothing is assumed to be SOX. v1 sources are predominantly SOX-404, but the schema does not have to change when they are not.
 
 **Deliverables (in dependency order):**
 1. Labeled dataset of internal control scenarios (JSONL, versioned in GCS)
@@ -51,8 +53,9 @@ EDGAR APIs ──> Colab notebook (fetch) ──> gcs://<bucket>/raw/          (
 
 | Skill | Covers |
 |---|---|
-| `edgar-harvesting` | Stages 01–02. SEC User-Agent and rate-limit policy, idempotent fetch, Item 9A extraction boundaries. |
-| `labeling-controls` | Stages 03–04. Sheet/Apps Script loop, label taxonomy, `label_source` discipline, release gate. |
+| `edgar-harvesting` | Stages 01–02. SEC User-Agent and rate-limit policy, idempotent fetch, ICFR section extraction boundaries, comment letters and 4.02 filters. |
+| `labeling-controls` | Stages 03–04. Sheet/Apps Script loop, label taxonomy, `label_source` discipline, clean-confidence rating, release gate. |
+| `synthetic-authoring` | Task B scenarios and minimal pairs. Structured generation, style grounding, drafting-model conflict disclosure. |
 | `running-evals` | Stages 05–06. Run manifests, structured-output parsing, per-task metrics, batch API usage. |
 | `publishing-results` | README, dataset card, site copy, write-ups, ISACA article, required disclosures. Includes the GoDaddy DNS reference for auditagent.ca. |
 
@@ -60,21 +63,38 @@ Commands: `/new-run <task> <model>` sets up an eval run with a complete manifest
 
 ## Data Sources
 
-| Source | Use | Access |
-|---|---|---|
-| EDGAR full-text search (`efts.sec.gov`) | Find 10-Ks disclosing material weaknesses | Free, no key; query "material weakness", form type 10-K |
-| EDGAR submissions API (`data.sec.gov`) | Filing indexes, fetch 10-K HTML | Free, no key; **must set a descriptive User-Agent header per SEC policy, max ~10 req/s** |
-| Item 9A extraction | Core text for Tasks A & C | BeautifulSoup over filing HTML |
-| Synthetic scenarios | Task B (control design) | Hand-authored + LLM-drafted variants, human-verified |
-| COSO 2013, PCAOB AS 2201 | Label taxonomy & severity definitions | Reference only — do not reproduce framework text verbatim in the dataset |
+Licensing is the gate. Everything in the released dataset must be public domain or authored here — CC-BY 4.0 cannot carry licensed content, and an LLM paraphrase of licensed content is a derivative work whose licensing problem is invisible in the output.
 
-Target for v1: ~500 filings (~250 with material weaknesses, ~250 clean), ~300–400 final benchmark items.
+**Tier 1 — in the dataset, EDGAR** (free, no key, descriptive User-Agent required, ~10 req/s cap)
+
+| Source | Use |
+|---|---|
+| Full-text search (`efts.sec.gov`) | Find filings disclosing material weaknesses. `forms=10-K` matches `root_forms` and lets 10-K/A through — filter amendments explicitly. |
+| 10-K Item 9A, 20-F Item 15, 40-F controls section | Core disclosure text. 20-F and 40-F filers are foreign private issuers complying with SOX — they broaden the *company* population, not the *regime* population. |
+| Item 4.02 8-K (non-reliance) | **Clean-label integrity.** A later 4.02 covering the period means a clean assertion was wrong; the item is excluded, not scored. |
+| Comment letters (`UPLOAD` / `CORRESP`) | Cases where SEC staff questioned a filer's own ICFR conclusion, with the staff's reasoning attached. Search via the "Filing review correspondence" filing category. |
+
+**Tier 2 — in the dataset, Federal Audit Clearinghouse** (fac.gov, free public API, public under 2 CFR 200.512(b)(1))
+
+Single Audit findings are **explicitly classified as material weakness or significant deficiency** — the severity gradient EDGAR cannot provide, because SEC rules compel disclosure of material weaknesses only. Note what it is: internal control over federal award compliance, not ICFR in the 404 sense. Admissible under the ICFR framing as a distinct sub-population, tagged `regime: single_audit_uniform_guidance`, reported separately, never silently pooled with periodic filings.
+
+**Tier 3 — read for scenario design, never redistribute**
+
+SEC AAERs and PCAOB inspection reports. Public domain, but AAERs are fraud enforcement narratives and PCAOB Part I.A findings are *audit* deficiencies, not *control* deficiencies. Neither is the task being measured.
+
+**Categorically excluded**
+
+Audit Analytics, WRDS/Compustat, auditing textbooks, Harvard/Ivey/Darden cases, AICPA/IIA/ACFE materials. Licensed or copyrighted; cannot be redistributed under CC-BY.
+
+**Reference only:** COSO 2013 and PCAOB AS 2201 for taxonomy and severity definitions. Cite by principle or standard number; never reproduce framework text in the dataset.
+
+Target for v1: ~500 filings (~250 with material weaknesses, ~250 clean), ~300–400 final benchmark items. Expect yield well below filing count — on a sample of 8, three extractions were unusable (one at the length cap, two cross-reference stubs).
 
 ## Task Definitions
 
-- **Task A — Deficiency classification:** disclosed weakness → severity (deficiency / significant deficiency / material weakness) + COSO component. Labels derived from disclosure itself.
-- **Task B — Control design evaluation:** process narrative + control description → designed effectively? If not, identify the gap (SoD, precision, evidence, timeliness...). Synthetic, hand-labeled.
-- **Task C — Clean/dirty discrimination:** mixed clean and deficient Item 9A text → flag correctly. **False-positive rate on clean items is the headline metric** (FinVerBench found 95–100% FP rates on clean statements for most models — test whether this holds for controls).
+- **Task A — Deficiency classification:** described deficiency → **COSO component** (primary) and severity (secondary). Anchored on COSO because it is jurisdiction-neutral and well-populated across every source. **Severity is scored only on `gradient_bearing` items** — Single Audit findings and synthetic scenarios. Periodic filings are near-entirely material weakness, so scoring severity corpus-wide would measure the sampling frame rather than the model.
+- **Task B — Control design evaluation:** process narrative + control description → designed effectively? If not, identify the gap (SoD, precision, evidence, timeliness...). Synthetic, hand-labeled. Includes **minimal pairs** — identical scenarios differing by one deliberate change — which real filings cannot produce and which isolate reasoning from boilerplate pattern-matching.
+- **Task C — Clean/dirty discrimination:** mixed clean and deficient disclosure text → flag correctly. **False-positive rate on clean items is the headline metric** (FinVerBench found 95–100% FP rates on clean statements for most models — test whether this holds for controls). Reported on the `attested` clean subset, per the clean-label policy below.
 - **Task D — Standards citation:** identified deficiency → correct COSO principle / PCAOB standard citation.
 
 ## Coding Conventions
@@ -94,12 +114,25 @@ Target for v1: ~500 filings (~250 with material weaknesses, ~250 clean), ~300–
 - Run each model on the full item set; no sampling shortcuts in released results.
 - Log every raw model response to `results/<run_id>/raw/` before scoring — scoring bugs are recoverable, lost responses are not.
 
+## Clean-label Policy
+
+The two Task C labels are **not epistemically equivalent**, and this is the benchmark's central methodological risk.
+
+- "Deficient" comes from management stating a material weakness. High confidence.
+- "Clean" comes from nobody having said anything. That is absence of disclosure, not absence of deficiency.
+
+If a model flags a filing that management called effective but which was later restated, that is **not a false positive — the model may be right and the label wrong.** Scoring it as error inflates the headline number. Two controls:
+
+1. **Look-ahead exclusion.** A later Item 4.02 8-K, or a subsequent-period material weakness covering the period, sets `subsequent_non_reliance` and removes the item. `release_gate` hard-fails on any `excluded_restated` item reaching a version.
+2. **Stratify by attestation.** `clean_confidence` is `attested` when a registered public accounting firm issued an ICFR opinion behind the assertion, `management_only` when it is management's word alone (smaller reporting companies have no 404(b) attestation). **The headline FP rate is reported on the `attested` subset**, where "false positive" means what the word implies. The `management_only` rate is reported alongside, labelled as the weaker measurement it is.
+
 ## Contamination Policy
 
 EDGAR filings are in every model's training data. Mitigations (document all of them in the write-up):
 1. Prioritize 2025–2026 filings (post-cutoff for most evaluated models).
 2. Maintain a paraphrased subset of disclosure items to separate memorization from reasoning; report both scores.
 3. Task B synthetic items are contamination-free by construction — treat them as the reasoning control group.
+4. **Synthetic authorship is itself a conflict.** Record `drafted_by` on every synthetic item and report scores split by drafting model. If items drafted by a vendor's model favour that vendor, it must be visible rather than buried. Draft with a different model family than the headline evaluees.
 
 ## Licensing
 
@@ -112,5 +145,7 @@ EDGAR filings are in every model's training data. Mitigations (document all of t
 - Fine-tuning or LoRA experiments (FinLoRA territory)
 - Financial statement / numerical error detection (AuditBench, FinVerBench territory)
 - Multi-agent or tool-use evaluation
-- Any non-English filings
+- Any non-English filings — which rules out J-SOX/EDINET
 - ITGC-specific scenarios (candidate for v2)
+- **SEDAR+ scraping.** Canadian coverage comes from 40-F filers on EDGAR, which cost only new heading logic. SEDAR+ has no EDGAR-equivalent full-text search API; going there directly is the most expensive path for the least marginal data. Note also that NI 52-109 venture issuers file a Basic Certificate with no ICFR representation at all, so a large slice of Canadian issuers produces nothing to label.
+- **UK FRC Provision 29** — first reports land ~2027. Too early.

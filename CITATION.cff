@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "AuditAgent Bench: a benchmark for LLM evaluation of internal controls under SOX 404"
+title: "AuditAgent Bench: a benchmark for LLM evaluation of internal control over financial reporting"
 message: "If you use this benchmark, please cite it and state which version you used."
 type: dataset
 
@@ -25,7 +25,9 @@ abstract: >-
 
 keywords:
   - internal control
+  - ICFR
   - SOX 404
+  - internal control
   - internal audit
   - benchmark
   - large language models
