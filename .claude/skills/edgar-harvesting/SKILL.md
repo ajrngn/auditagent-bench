@@ -64,7 +64,7 @@ Expect yield from a 500-filing pull to be well below 500. Flag records at the le
 
 ## Required fields on every record
 
-`source_url`, `accession_number`, `cik`, `company_name`, `fiscal_year`, `form_type`, `filing_date`, `item_9a_text`, `extraction_method`, `fetched_at`.
+`source_url`, `accession_number`, `cik`, `company_name`, `fiscal_year`, `form_type`, `filing_date`, `icfr_text`, `extraction_method`, `fetched_at`.
 
 Labels are **not** assigned here. Stage 01/02 produce unlabeled text only — labeling happens in `03_labeling_sync`. See the `labeling-controls` skill.
 

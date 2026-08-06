@@ -2,17 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://auditagent.ca/schemas/filing_record.schema.json",
   "title": "Filing record",
-  "description": "One extracted 10-K Item 9A record, written by 02_extract_item9a to gcs://<bucket>/processed/. Unlabeled.",
+  "description": "One extracted ICFR disclosure, written by 02_extract_item9a to gcs://<bucket>/processed/. Unlabeled. Scope is internal control over financial reporting generally: Item 9A of a 10-K, Item 15 of a 20-F, and the equivalent section of a 40-F all land here, distinguished by icfr_item rather than assumed to be Item 9A.",
   "type": "object",
   "required": [
     "accession_number",
     "cik",
     "company_name",
     "form_type",
+    "jurisdiction",
+    "regime",
     "fiscal_year",
     "filing_date",
     "source_url",
-    "item_9a_text",
+    "icfr_text",
+    "icfr_item",
     "extraction_method",
     "fetched_at"
   ],
@@ -25,26 +28,84 @@
     },
     "cik": { "type": "string", "pattern": "^[0-9]{1,10}$" },
     "company_name": { "type": "string", "minLength": 1 },
-    "form_type": { "type": "string", "enum": ["10-K", "10-K/A", "10-KT"] },
+
+    "form_type": {
+      "type": "string",
+      "enum": ["10-K", "10-K/A", "10-KT", "20-F", "40-F"],
+      "description": "Amendments (10-K/A) are excluded from the sampling frame by 01_edgar_fetch — EDGAR's forms filter matches root_forms and lets them through, and they are partial refilings with no reliable ICFR section. The value is retained here so an amendment that enters deliberately is visible rather than disguised."
+    },
+
+    "jurisdiction": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2 of the registrant's home jurisdiction. A 40-F filer is Canadian, so CA — independent of the regime it reports under."
+    },
+    "regime": {
+      "type": "string",
+      "enum": ["sox_404"],
+      "description": "The regulatory regime the ICFR assertion was made under. Every record produced by this stage is SOX 404, including 20-F and 40-F filers: a foreign private issuer registered with the SEC complies with SOX, not with its home regime. Other regimes reach the benchmark through different stages and carry their own values in benchmark_item.schema.json."
+    },
+
     "fiscal_year": { "type": "integer", "minimum": 1994, "maximum": 2100 },
     "filing_date": { "type": "string", "format": "date" },
     "source_url": { "type": "string", "format": "uri" },
-    "item_9a_text": {
+
+    "icfr_text": {
       "type": "string",
       "minLength": 500,
-      "description": "Extracted Item 9A span. Records failing the minimum length are diverted to the extraction-failure list, never truncated into processed/."
+      "description": "Extracted ICFR disclosure span. Records failing the minimum length are diverted to the extraction-failure list, never truncated into processed/."
+    },
+    "icfr_item": {
+      "type": "string",
+      "enum": ["item_9a", "item_15", "form_40f_controls"],
+      "description": "Which section the span came from. 10-K uses Item 9A, 20-F uses Item 15, and 40-F carries its controls disclosure outside the numbered-item scheme. Boundary headings differ per form, so a parser regression can be traced to the form it broke on."
     },
     "extraction_method": {
       "type": "string",
       "enum": ["heading_to_next_item", "heading_to_end", "manual"],
       "description": "How the span boundaries were found. Recorded so a parser change can be traced, and so heading_to_end records — where no following item heading existed and the span was taken to a length cap — can be counted and reviewed separately."
     },
-    "fetched_at": { "type": "string", "format": "date-time" },
-    "sic_code": { "type": "string" },
+
+    "auditor_attested": {
+      "type": "boolean",
+      "description": "Whether a registered public accounting firm issued an attestation on ICFR. Required of accelerated and large accelerated non-EGC filers; absent for smaller reporting companies, whose assertion is management's alone. This drives clean_confidence downstream, because the two are not the same standard of evidence."
+    },
     "filer_status": {
       "type": "string",
       "enum": ["large_accelerated", "accelerated", "non_accelerated", "smaller_reporting", "unknown"],
-      "description": "Affects whether an auditor attestation on ICFR was required."
+      "description": "Determines whether auditor attestation on ICFR was required."
+    },
+
+    "subsequent_non_reliance": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when a later Item 4.02 8-K, or a subsequent-period material weakness covering this period, contradicts an effective-ICFR assertion made here. Such a record must never become a Task C clean item — the clean label is known to be wrong, and scoring a model's correct flag as a false positive would inflate the benchmark's headline metric."
+    },
+    "subsequent_non_reliance_accession": {
+      "type": "string",
+      "description": "Accession number of the 4.02 8-K or later filing that contradicts this one. Present when subsequent_non_reliance is true, so the exclusion is auditable rather than asserted."
+    },
+
+    "fetched_at": { "type": "string", "format": "date-time" },
+    "sic_code": { "type": "string" }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "subsequent_non_reliance": { "const": true } }, "required": ["subsequent_non_reliance"] },
+      "then": { "required": ["subsequent_non_reliance_accession"] }
+    },
+    {
+      "if": { "properties": { "form_type": { "const": "10-K" } }, "required": ["form_type"] },
+      "then": { "properties": { "icfr_item": { "const": "item_9a" } } }
+    },
+    {
+      "if": { "properties": { "form_type": { "const": "20-F" } }, "required": ["form_type"] },
+      "then": { "properties": { "icfr_item": { "const": "item_15" } } }
+    },
+    {
+      "if": { "properties": { "form_type": { "const": "40-F" } }, "required": ["form_type"] },
+      "then": { "properties": { "icfr_item": { "const": "form_40f_controls" } } }
     }
-  }
+  ]
 }

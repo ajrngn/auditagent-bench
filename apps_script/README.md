@@ -17,11 +17,11 @@ The Google account running the script needs `roles/storage.objectCreator` on the
 
 ## Sheet columns
 
-`item_id`, `accession_number`, `company_name`, `fiscal_year`, `item_9a_text`, `severity`, `coso_component`, `is_deficient`, `reviewed`, `reviewer_notes`
+`item_id`, `accession_number`, `company_name`, `fiscal_year`, `icfr_text`, `severity`, `coso_component`, `is_deficient`, `reviewed`, `reviewer_notes`
 
 Stage 03 writes the header row and appends candidates. Set data validation dropdowns on `severity` and `coso_component` from the taxonomy in the `labeling-controls` skill, and a checkbox on `reviewed`.
 
-`item_9a_text` is truncated to 45,000 characters on push — Sheets caps a cell at 50,000.
+`icfr_text` is truncated to 45,000 characters on push — Sheets caps a cell at 50,000.
 
 ## Menu actions
 

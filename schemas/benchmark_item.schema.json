@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://auditagent.ca/schemas/benchmark_item.schema.json",
   "title": "Benchmark item",
-  "description": "One released benchmark item, written by 04_build_benchmark to gcs://<bucket>/benchmark/v0.N/. Released versions are immutable.",
+  "description": "One released benchmark item, written by 04_build_benchmark to gcs://<bucket>/benchmark/v0.N/. Released versions are immutable. Scope is internal control over financial reporting (ICFR) generally; SOX 404 is one regime among several, recorded per item rather than assumed.",
   "type": "object",
   "required": ["item_id", "task", "input", "label", "label_source", "provenance"],
   "additionalProperties": false,
@@ -28,11 +28,6 @@
       "type": "object",
       "description": "Ground truth. Keys populated depend on task.",
       "properties": {
-        "severity": {
-          "type": "string",
-          "enum": ["deficiency", "significant_deficiency", "material_weakness"],
-          "description": "Task A"
-        },
         "coso_component": {
           "type": "string",
           "enum": [
@@ -42,7 +37,17 @@
             "information_and_communication",
             "monitoring_activities"
           ],
-          "description": "Tasks A, D"
+          "description": "Task A primary label, and Task D secondary. Jurisdiction-neutral, which is why Task A is anchored here rather than on severity."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["deficiency", "significant_deficiency", "material_weakness"],
+          "description": "Task A SECONDARY label, present only on gradient-bearing items. SEC rules compel disclosure of material weaknesses only, so items sourced from 10-K/20-F/40-F filings are almost entirely material_weakness and carry gradient_bearing:false. Score severity on the gradient-bearing subset only; scoring it corpus-wide measures the sampling frame, not the model."
+        },
+        "gradient_bearing": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when this item's source could have expressed a severity other than material_weakness — Single Audit findings and synthetic items. False for SEC periodic filings."
         },
         "designed_effectively": { "type": "boolean", "description": "Task B" },
         "gap_type": {
@@ -74,6 +79,12 @@
     "reviewed_at": { "type": "string", "format": "date-time" },
     "reviewer_notes": { "type": "string" },
 
+    "clean_confidence": {
+      "type": "string",
+      "enum": ["attested", "management_only", "excluded_restated"],
+      "description": "Task C clean items only. A clean label means nobody disclosed a weakness — absence of disclosure, not absence of deficiency — so its strength varies. 'attested': an auditor issued an ICFR opinion behind the assertion (accelerated and large accelerated non-EGC filers). 'management_only': management assertion with no 404(b) attestation. 'excluded_restated': a later Item 4.02 8-K or subsequent-period material weakness contradicts the clean label; these must not reach a release. The headline false-positive rate is reported on the 'attested' subset, where a false positive means what the word implies."
+    },
+
     "paraphrased": {
       "type": "boolean",
       "default": false,
@@ -84,17 +95,61 @@
       "description": "item_id of the verbatim twin. Required when paraphrased is true."
     },
 
+    "minimal_pair_id": {
+      "type": "string",
+      "description": "Synthetic items only. Two items sharing this id are identical except for one deliberate change — the same control with and without a segregation-of-duties gap, for instance. A model that answers both correctly is reasoning about the control; one that flips on surrounding language is not. Real filings cannot produce this."
+    },
+    "pair_role": {
+      "type": "string",
+      "enum": ["control", "variant"],
+      "description": "Which half of a minimal pair. Required when minimal_pair_id is set."
+    },
+
     "provenance": {
       "type": "object",
-      "required": ["origin"],
+      "required": ["origin", "jurisdiction", "regime"],
+      "additionalProperties": false,
       "properties": {
-        "origin": { "type": "string", "enum": ["edgar", "synthetic"] },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "sec_periodic",
+            "sec_comment_letter",
+            "single_audit",
+            "synthetic"
+          ],
+          "description": "Which source tier produced this item. 'sec_periodic' is 10-K/20-F/40-F; 'sec_comment_letter' is UPLOAD/CORRESP, where staff questioned a filer's own ICFR conclusion; 'single_audit' is a Federal Audit Clearinghouse finding; 'synthetic' is hand-authored or drafted-then-verified."
+        },
+        "jurisdiction": {
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 of the reporting entity's home jurisdiction, or 'XX' for synthetic items with no real filer."
+        },
+        "regime": {
+          "type": "string",
+          "enum": ["sox_404", "ni_52_109", "single_audit_uniform_guidance", "j_sox", "none"],
+          "description": "The regulatory regime the assertion was made under. A 40-F filer is a Canadian company complying with SOX, so jurisdiction CA and regime sox_404 — the two are independent and pooling them silently would be a methodological error. 'none' for synthetic."
+        },
         "source_url": { "type": "string", "format": "uri" },
         "accession_number": { "type": "string" },
         "cik": { "type": "string" },
-        "fiscal_year": { "type": "integer" }
-      },
-      "description": "origin=edgar requires source_url, accession_number, cik, and fiscal_year."
+        "fiscal_year": { "type": "integer" },
+        "form_type": {
+          "type": "string",
+          "enum": ["10-K", "20-F", "40-F", "8-K", "UPLOAD", "CORRESP"]
+        },
+        "auditor_attested": {
+          "type": "boolean",
+          "description": "Whether an auditor issued an ICFR attestation. Drives clean_confidence, and is a materially different evidence standard from a management-only assertion."
+        },
+        "fac_report_id": {
+          "type": "string",
+          "description": "Federal Audit Clearinghouse report identifier, for single_audit items."
+        },
+        "drafted_by": {
+          "type": "string",
+          "description": "Synthetic items only. Full pinned model identifier of the model that drafted the scenario, or 'human'. Required so results can be split by drafting model — if items drafted by a vendor's model favour that vendor, that bias must be visible rather than buried."
+        }
+      }
     }
   },
 
@@ -104,15 +159,37 @@
       "then": { "required": ["paraphrase_of"] }
     },
     {
+      "if": { "required": ["minimal_pair_id"] },
+      "then": { "required": ["pair_role"] }
+    },
+    {
       "if": {
-        "properties": { "provenance": { "properties": { "origin": { "const": "edgar" } } } }
+        "properties": {
+          "provenance": {
+            "properties": { "origin": { "const": "sec_periodic" } },
+            "required": ["origin"]
+          }
+        }
       },
       "then": {
         "properties": {
           "provenance": {
-            "required": ["source_url", "accession_number", "cik", "fiscal_year"]
+            "required": ["source_url", "accession_number", "cik", "fiscal_year", "form_type"]
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": { "origin": { "const": "synthetic" } },
+            "required": ["origin"]
+          }
+        }
+      },
+      "then": {
+        "properties": { "provenance": { "required": ["drafted_by"] } }
       }
     }
   ]
